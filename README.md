@@ -552,6 +552,9 @@ void test(int n)
         }
     }
 ```
+**效果图如下**
+<img width="846" alt="image" src="https://user-images.githubusercontent.com/65697942/173805411-922c8e94-28d2-485c-8468-deb95b1a0a0a.png">
+
 
 * 个人博客：https://blog.csdn.net/RunningBeef/article/details/124693348?spm=1001.2014.3001.5501 
 
