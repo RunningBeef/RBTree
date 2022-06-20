@@ -350,7 +350,7 @@
 ```
 ## 测试红黑树代码是否正确
 **如何判断一棵红黑树是正确的？**
-1. 结点的key左小右大
+1. 判断是否是BST
 2. 任一结点到叶子节点路径上的黑色结点个数相同（黑色平衡）
 3. 没有连续量两个节点都是红色结点
 4. 根结点是否为黑色
@@ -358,18 +358,11 @@
 
 **代码**
 ```
-/* 函数返回黑色高度 */
+/* 检查黑色平衡、指针、结点颜色，函数返回黑色高度 */
     int check_tree(Node *temp)
     {
         if (temp == nullptr)
             return 0;
-
-        /* 检查根结点颜色是否为黑色 */
-        if (temp == root && root->color != Black)
-        {
-            cout << "error:root color is not black " << endl;
-            exit(-1);
-        }
 
         /* 黑色节点计数，判断黑色平衡 */
         int ct_black = 0;
@@ -380,12 +373,12 @@
         /* 判断parent指针是否正确 */
         if (temp->left_Son && temp->left_Son->parent != temp)
         {
-            cout << temp->key << " pointer left error: " << temp->left_Son->key << endl;
+            cout << temp->key << "ERROR: pointer left error: " << temp->left_Son->key << endl;
             exit(-1);
         }
         if (temp->right_Son && temp->right_Son->parent != temp)
         {
-            cout << temp->key << " pointer right error: " << temp->right_Son->key << endl;
+            cout << temp->key << "ERROR: pointer right error: " << temp->right_Son->key << endl;
             exit(-1);
         }
 
@@ -396,22 +389,14 @@
             if (temp->left_Son != nullptr && temp->left_Son->color == Red)
             {
                 
-                cout << temp->key << " color error with left: " << temp->left_Son->key << endl;
+                cout << temp->key << "ERROR: color error with left: " << temp->left_Son->key << endl;
                 exit(-1);
             }
             if (temp->right_Son != nullptr && temp->right_Son->color == Red)
             {
-                cout << temp->key << " color error with right: " << temp->right_Son->key << endl;
+                cout << temp->key << "ERROR: color error with right: " << temp->right_Son->key << endl;
                 exit(-1);
             }
-        }
-
-        /* 判断key左小右大*/
-        if ((temp->left_Son != nullptr && temp->left_Son->key > temp->key) || (temp->right_Son != nullptr && temp->key > temp->right_Son->key))
-        {
-
-            cout << "error: check_Node error in key" << endl;
-            exit(-1);
         }
 
         /* 判断黑色平衡 */
@@ -420,14 +405,54 @@
         if (left_black != check_tree(temp->right_Son))
         {
             cout << temp->key << endl;
-            cout << "error: check_Node error in color" << endl;
+            cout << "ERROR: check_Node error in color" << endl;
             exit(-1);
         }
 
         return ct_black + left_black;
     }
 
+    /* BST中序遍历的得到的key从小到大 */
+    void isValidBST(Node* root) {
+      stack<Node * > st;
+      Node * last = nullptr, * now = root;
+      while(true)
+      {
+          while(now != nullptr)
+          {
+              st.push(now);
+              now = now->left_Son;
+          }
+          if(st.size())
+            now = st.top();
+          else return ;
+          st.pop();
+          if(last != nullptr && now->key <= last->key)
+          {
+              std::cout << "EROOR: not BST" << std::endl;
+              exit(-1);
+          }
+          last = now;
+          now = now->right_Son;
+      }
+      return ;
+    }
+
+    /* 判断红黑树的正确性 */
+    void isVaildRbTree()
+    {
+        /* 判断是否是BST */
+        check_tree(root);
+        /* 判断红黑树其他要求 */
+        isValidBST(root);
+        if(root != nullptr && root->color == Red)
+        {
+            std::cout << "ERROR: root color is  not black" << std::endl;
+            exit(-1);
+        }
+    }
 ```
+
 **如何编写测试函数**
 1. 利用上面这3点编写一个测试红黑树正确性的check函数（递归返回黑色子树黑色高度，异常时exit(-1)并输出提示）
 2. 你可以随机生成若干个的结点的key,边插入到红黑树中，边把key保存到数组中，边调用check函数判断红黑树结构是否正确。如果过程中没有错误，说明插入代码是正确的（先不用重置随机数种子，这样你如果测试出问题，继续生成同样个数的结点，生成的随机数还是一样的，**保证了数据的可复现性**。
