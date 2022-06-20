@@ -1,4 +1,8 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <stack>
+#include <queue>
+#include <vector>
+#include <unordered_map>
 #define Red 0
 #define Black 1
 using namespace std;
@@ -258,7 +262,7 @@ public:
 
     void insert_case5(Node *son)
     {
-        // cout << "insert_case5" << endl;
+        cout << "insert_case5" << endl;
         son->parent->color = Black;
         get_grandparent(son)->color = Red;
         /* 左左结构 右旋即可 */
@@ -543,18 +547,11 @@ public:
     }
 
     
-    /* 检查黑色平衡 和 key的左小右大。函数返回黑色高度 */
+    /* 检查黑色平衡、指针、结点颜色，函数返回黑色高度 */
     int check_tree(Node *temp)
     {
         if (temp == nullptr)
             return 0;
-
-        /* 检查根结点颜色是否为黑色 */
-        if (temp == root && root->color != Black)
-        {
-            cout << "error:root color is not black " << endl;
-            exit(-1);
-        }
 
         /* 黑色节点计数，判断黑色平衡 */
         int ct_black = 0;
@@ -565,12 +562,12 @@ public:
         /* 判断parent指针是否正确 */
         if (temp->left_Son && temp->left_Son->parent != temp)
         {
-            cout << temp->key << " pointer left error: " << temp->left_Son->key << endl;
+            cout << temp->key << "ERROR: pointer left error: " << temp->left_Son->key << endl;
             exit(-1);
         }
         if (temp->right_Son && temp->right_Son->parent != temp)
         {
-            cout << temp->key << " pointer right error: " << temp->right_Son->key << endl;
+            cout << temp->key << "ERROR: pointer right error: " << temp->right_Son->key << endl;
             exit(-1);
         }
 
@@ -581,22 +578,14 @@ public:
             if (temp->left_Son != nullptr && temp->left_Son->color == Red)
             {
                 
-                cout << temp->key << " color error with left: " << temp->left_Son->key << endl;
+                cout << temp->key << "ERROR: color error with left: " << temp->left_Son->key << endl;
                 exit(-1);
             }
             if (temp->right_Son != nullptr && temp->right_Son->color == Red)
             {
-                cout << temp->key << " color error with right: " << temp->right_Son->key << endl;
+                cout << temp->key << "ERROR: color error with right: " << temp->right_Son->key << endl;
                 exit(-1);
             }
-        }
-
-        /* 判断key左小右大*/
-        if ((temp->left_Son != nullptr && temp->left_Son->key > temp->key) || (temp->right_Son != nullptr && temp->key > temp->right_Son->key))
-        {
-
-            cout << "error: check_Node error in key" << endl;
-            exit(-1);
         }
 
         /* 判断黑色平衡 */
@@ -605,11 +594,51 @@ public:
         if (left_black != check_tree(temp->right_Son))
         {
             cout << temp->key << endl;
-            cout << "error: check_Node error in color" << endl;
+            cout << "ERROR: check_Node error in color" << endl;
             exit(-1);
         }
 
         return ct_black + left_black;
+    }
+
+    /* BST中序遍历的得到的key从小到大 */
+    void isValidBST(Node* root) {
+      stack<Node * > st;
+      Node * last = nullptr, * now = root;
+      while(true)
+      {
+          while(now != nullptr)
+          {
+              st.push(now);
+              now = now->left_Son;
+          }
+          if(st.size())
+            now = st.top();
+          else return ;
+          st.pop();
+          if(last != nullptr && now->key <= last->key)
+          {
+              std::cout << "EROOR: not BST" << std::endl;
+              exit(-1);
+          }
+          last = now;
+          now = now->right_Son;
+      }
+      return ;
+    }
+
+    /* 判断红黑树的正确性 */
+    void isVaildRbTree()
+    {
+        /* 判断是否是BST */
+        check_tree(root);
+        /* 判断红黑树其他要求 */
+        isValidBST(root);
+        if(root != nullptr && root->color == Red)
+        {
+            std::cout << "ERROR: root color is  not black" << std::endl;
+            exit(-1);
+        }
     }
 
     T *searchValue(int key)
@@ -646,7 +675,7 @@ public:
 void test(int n)
 {
     RB_Tree<int> rbTree{};
-    map<int, int> mp;  /* 标记已经生成的key */
+    unordered_map<int, int> mp;  /* 标记已经生成的key */
     vector<int> index; /* 保存key方便删除 */
 
     /* 测试插入 */
@@ -654,6 +683,7 @@ void test(int n)
     {
         /* 随机生成key */
         int key;
+        /*  注意这里随即生成的数据范围一定不能小于要生成的结点个数，不然会一直卡在这里 */
         while (mp.find(key = rand() % 1000) != mp.end())
         {
         }
@@ -664,8 +694,8 @@ void test(int n)
 
         cout << "insert key: " << key << endl;
         rbTree.insert(key, 1);
-
-        rbTree.check_tree(rbTree.get_root());
+        std::cout << " ?? " << endl;
+        rbTree.isVaildRbTree();
         // rbTree.tourist();
     }
 
@@ -684,11 +714,11 @@ void test(int n)
        
         rbTree.erase(key);
 
-        rbTree.check_tree(rbTree.get_root());
+        rbTree.isVaildRbTree();
         // rbTree.tourist();
     }
 
-    cout << "rb_tree test success" << endl;
+    cout << "SUCCESS: rb_tree test success" << endl;
 }
 
 int main()
