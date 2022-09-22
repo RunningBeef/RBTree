@@ -44,6 +44,7 @@ public:
         }
     }
 
+private:
     Node *get_root()
     {
         return root;
@@ -79,7 +80,7 @@ public:
 
     /* 左旋 注意：要记得修改被转移结点的父指针
 
-    这里我们一定要考虑要调整的结点不一定是叶子节点，
+    这里一定要考虑要调整的结点不一定是叶子节点，
     因为上面有一种插入情况是要向上做递归检查的,
     所以我们这边记得需要迁移的结点的左右儿子做适当的迁移*/
     void rotated_left(Node *son)
@@ -138,45 +139,7 @@ public:
             root = son;
     }
 
-    /* 先找到合适位置插入，之后再根据父节点颜色判断是否进行调整 */
-    void insert(int key, T value)
-    {
-        Node *insertNode = new Node(key, value);
 
-        Node *traver = root;
-        while (traver)
-        {
-            if (key < traver->key)
-            {
-                if (traver->left_Son)
-                    traver = traver->left_Son;
-                else
-                {
-                    traver->left_Son = insertNode;
-                    break;
-                }
-            }
-            else if (key > traver->key)
-            {
-                if (traver->right_Son)
-                    traver = traver->right_Son;
-                else
-                {
-                    traver->right_Son = insertNode;
-                    break;
-                }
-            }
-            else /* 这个结点已经有过就更新 */
-            {
-                traver->value = value;
-                delete insertNode;
-                return;
-            }
-        }
-
-        insertNode->parent = traver;
-        insert_case1(insertNode);
-    }
 
     /* 没有根结点 */
     void insert_case1(Node *son)
@@ -298,43 +261,6 @@ public:
         b->key = t_key;
     }
 
-    /*
-    交换要删除的结点和要删除的结点的前驱结点
-    删除原来结点的前驱结点注意删除后记得给指针置为nullptr
-    */
-
-    bool erase(int key)
-    {
-        Node *traver = root;
-
-        while (traver)
-        {
-            cout << traver->key << endl;
-            if (key < traver->key)
-                traver = traver->left_Son;
-            else if (traver->key < key)
-                traver = traver->right_Son;
-            else
-                break;
-        }
-
-        /* 没有找到要删除的结点 */
-        if (traver == nullptr)
-            return false;
-
-        /* 获得前驱结点 */
-        Node *preNode = get_pre_node(traver->left_Son);
-
-        /* 将前驱结点和要删除结点的值交换，问题变为删除这个点的前驱结点
-        如果没有前驱结点删除自身*/
-        if (preNode)
-            swap(traver, preNode);
-        else
-            preNode = traver;
-
-        erase_adjust(preNode);
-        return true;
-    }
 
     void erase_adjust(Node *son)
     {
@@ -627,21 +553,88 @@ public:
       return ;
     }
 
-    /* 判断红黑树的正确性 */
-    void isVaildRbTree()
-    {
-        /* 判断是否是BST */
-        check_tree(root);
-        /* 判断红黑树其他要求 */
-        isValidBST(root);
-        if(root != nullptr && root->color == Red)
-        {
-            std::cout << "ERROR: root color is  not black" << std::endl;
-            exit(-1);
-        }
-    }
+    
 
-    T *searchValue(int key)
+
+
+public:
+        /* 先找到合适位置插入，之后再根据父节点颜色判断是否进行调整 */
+    void insert(int key, T value)
+    {
+        Node *insertNode = new Node(key, value);
+
+        Node *traver = root;
+        while (traver)
+        {
+            if (key < traver->key)
+            {
+                if (traver->left_Son)
+                    traver = traver->left_Son;
+                else
+                {
+                    traver->left_Son = insertNode;
+                    break;
+                }
+            }
+            else if (key > traver->key)
+            {
+                if (traver->right_Son)
+                    traver = traver->right_Son;
+                else
+                {
+                    traver->right_Son = insertNode;
+                    break;
+                }
+            }
+            else /* 这个结点已经有过就更新 */
+            {
+                traver->value = value;
+                delete insertNode;
+                return;
+            }
+        }
+
+        insertNode->parent = traver;
+        insert_case1(insertNode);
+    }
+        /*
+    交换要删除的结点和要删除的结点的前驱结点
+    删除原来结点的前驱结点注意删除后记得给指针置为nullptr
+    */
+
+    bool erase(int key)
+    {
+        Node *traver = root;
+
+        while (traver)
+        {
+            cout << traver->key << endl;
+            if (key < traver->key)
+                traver = traver->left_Son;
+            else if (traver->key < key)
+                traver = traver->right_Son;
+            else
+                break;
+        }
+
+        /* 没有找到要删除的结点 */
+        if (traver == nullptr)
+            return false;
+
+        /* 获得前驱结点 */
+        Node *preNode = get_pre_node(traver->left_Son);
+
+        /* 将前驱结点和要删除结点的值交换，问题变为删除这个点的前驱结点
+        如果没有前驱结点删除自身*/
+        if (preNode)
+            swap(traver, preNode);
+        else
+            preNode = traver;
+
+        erase_adjust(preNode);
+        return true;
+    }
+        T *searchValue(int key)
     {
         Node *traver = root;
         while (traver)
@@ -668,6 +661,19 @@ public:
                 return traver;
         }
         return nullptr;
+    }
+    /* 判断红黑树的正确性 */
+    void isVaildRbTree()
+    {
+        /* 判断是否是BST */
+        check_tree(root);
+        /* 判断红黑树其他要求 */
+        isValidBST(root);
+        if(root != nullptr && root->color == Red)
+        {
+            std::cout << "ERROR: root color is  not black" << std::endl;
+            exit(-1);
+        }
     }
 };
 
@@ -723,7 +729,7 @@ void test(int n)
 
 int main()
 {
-   
+    cout << "Enter an integer to represent the test data volume" << endl;
     int n;  cin >> n;
     test(n);
     return 0;
