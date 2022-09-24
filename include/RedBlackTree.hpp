@@ -1,55 +1,212 @@
-# RB_Tree
-* c++ 实现的红黑树
-* 包含插入、刪除、测试调整后的红黑树的正确性，打印红黑树
-## 查找结点
-* 根据结点key左小又大递归查询即可，用迭代也行。
-## 插入结点 log级别
-* 插入思路见[维基百科红黑树](https://zh.wikipedia.org/wiki/%E7%BA%A2%E9%BB%91%E6%A0%91) 主要是对插入节点和插入节点的父节点兄弟节点等的颜色分类讨论。
-* **注意当递归向上调整的时候，新的需要调整的点变成了一颗有儿子的树，所以调整插入节点的函数要把被调整的节点当作一颗树来调整，转移节点的时候，要注意调整原节点左右儿子的位置**
-* **注意考虑可能递归向上调整的情况，所以旋转时要把子树转移好**
+#include <stack>
+#include <queue>
+#include <vector>
+#include <iostream>
+#include <unordered_map>
+#define NODE_COLOR_RED 0
+#define NODE_COLOR_BLACK 1
+using namespace std;
 
-**代码**
-```
-/* 先找到合适位置插入，之后再根据父节点颜色判断是否进行调整 */
-template <class T1, class T2>
-void RedBlackTree<T1, T2>::insert(T1 key, T2 value)
+template <class T1 = int, class T2 = int>
+class RedBlackTree
 {
-    Node *insertNode = new Node(key, value);
-
-    Node *traver = root_;
-    while (traver)
+private:
+    struct Node
     {
-        if (key < traver->key)
+        Node(T1 k, T2 v) : color(NODE_COLOR_RED), parent(nullptr), left_son(nullptr), right_son(nullptr), key(k), value(v) {}
+        Node() : color(NODE_COLOR_RED), parent(nullptr), left_son(nullptr), right_son(nullptr) {}
+        bool color;
+        T1 key;
+        T2 value;
+        Node *parent;
+        Node *left_son;
+        Node *right_son;
+    };
+    Node *root_ = nullptr;
+
+public:
+    RedBlackTree();
+
+    ~RedBlackTree();
+
+    void insert(T1 key, T2 value);
+
+    bool erase(T1 key);
+
+    T2 *getValue(T1 key);
+
+    Node *getNode(T1 key);
+
+    void checkRedBlackTree();
+
+    void printRedBlackTree();
+
+private:
+    void swapKeyAndValue(Node *a, Node *b);
+
+    Node *getRoot();
+
+    Node *getGrandparent(Node *son);
+
+    Node *getUncle(Node *son);
+
+    Node *getBrother(Node *son);
+
+    Node *getPreNode(Node *traver);
+
+    void rotatedLeft(Node *son);
+
+    void rotatedRight(Node *son);
+
+    void insertCaseOne(Node *son);
+
+    void insertCaseTwo(Node *son);
+
+    void insertCaseThree(Node *son);
+
+    void insertCaseFour(Node *son);
+
+    void insertCaseFive(Node *son);
+
+    void eraseAndAdjust(Node *son);
+
+    void eraseCaseOne(Node *son);
+
+    void eraseCaseTwo(Node *son);
+
+    void eraseCaseThree(Node *son);
+
+    int getHeight(Node *root_);
+
+    int checkBlackBalanceAndPointerAndColor(Node *temp);
+
+    void checkBst(Node *root_);
+};
+
+template <class T1, class T2>
+RedBlackTree<T1, T2>::RedBlackTree() : root_(nullptr) {}
+
+template <class T1, class T2>
+RedBlackTree<T1, T2>::~RedBlackTree()
+{
+    queue<Node *> q;
+    if (root_)
+    {
+        q.push(root_);
+        while (!q.empty())
         {
-            if (traver->left_son)
-                traver = traver->left_son;
-            else
-            {
-                traver->left_son = insertNode;
-                break;
-            }
-        }
-        else if (key > traver->key)
-        {
-            if (traver->right_son)
-                traver = traver->right_son;
-            else
-            {
-                traver->right_son = insertNode;
-                break;
-            }
-        }
-        else /* 这个结点已经有过就更新 */
-        {
-            traver->value = value;
-            delete insertNode;
-            return;
+            root_ = q.front();
+            q.pop();
+            if (root_->left_son)
+                q.push(root_->left_son);
+            if (root_->right_son)
+                q.push(root_->right_son);
+            delete root_;
         }
     }
-
-    insertNode->parent = traver;
-    insertCaseOne(insertNode);
 }
+
+template <class T1, class T2>
+typename RedBlackTree<T1, T2>::Node *RedBlackTree<T1, T2>::getRoot()
+{
+    return root_;
+}
+
+template <class T1, class T2>
+typename RedBlackTree<T1, T2>::Node *RedBlackTree<T1, T2>::getGrandparent(Node *son)
+{
+    if (son->parent == nullptr || son->parent->parent == nullptr)
+    {
+#ifdef DEBUG
+        cout << "error: no getUncle error " << endl;
+#endif
+        return nullptr;
+    }
+    return son->parent->parent;
+}
+
+template <class T1, class T2>
+
+typename RedBlackTree<T1, T2>::Node *RedBlackTree<T1, T2>::getUncle(Node *son)
+{
+    Node *grandparent = getGrandparent(son);
+    Node *father = son->parent;
+    return grandparent->left_son == father ? grandparent->right_son : grandparent->left_son;
+}
+
+/* 返回兄弟结点 */
+template <class T1, class T2>
+typename RedBlackTree<T1, T2>::Node *RedBlackTree<T1, T2>::getBrother(Node *son)
+{
+    if (son == son->parent->left_son)
+        return son->parent->right_son;
+    else
+        return son->parent->left_son;
+}
+
+/* 左旋 注意：要记得修改被转移结点的父指针
+
+这里一定要考虑要调整的结点不一定是叶子节点，
+因为上面有一种插入情况是要向上做递归检查的,
+所以我们这边记得需要迁移的结点的左右儿子做适当的迁移*/
+template <class T1, class T2>
+void RedBlackTree<T1, T2>::rotatedLeft(Node *son)
+{
+    Node *parent = son->parent;
+    Node *grandparent = parent->parent;
+
+    /*  将旋转结点的左儿子转移成父节点的右儿子 */
+    parent->right_son = son->left_son;
+    if (son->left_son)
+        son->left_son->parent = parent;
+
+    /* 将父节点转移到旋转结点的左儿子 */
+    son->left_son = parent;
+    parent->parent = son;
+
+    /* 修改son的父指针 */
+    son->parent = grandparent;
+
+    /* 修改grandparent的son指针 */
+    if (grandparent) /* 可能没有祖父结点 */
+        if (grandparent->left_son == parent)
+            grandparent->left_son = son;
+        else
+            grandparent->right_son = son;
+
+    else
+        root_ = son;
+}
+
+/* 右旋 RR结构*/
+template <class T1, class T2>
+void RedBlackTree<T1, T2>::rotatedRight(Node *son)
+{
+    Node *parent = son->parent;
+    Node *grandparent = parent->parent;
+
+    /* 将旋转结点的右儿子转移到父节点的左儿子 */
+    parent->left_son = son->right_son;
+    if (son->right_son)
+        son->right_son->parent = parent;
+
+    /* 将旋转结点的右儿子改为父节点 */
+    son->right_son = parent;
+    parent->parent = son;
+
+    /* 修改son的父指针 */
+    son->parent = grandparent;
+
+    /* 修改grandparent的son指针 */
+    if (grandparent)
+        if (grandparent->left_son == parent)
+            grandparent->left_son = son;
+        else
+            grandparent->right_son = son;
+    else
+        root_ = son;
+}
+
 /* 没有根结点 */
 template <class T1, class T2>
 void RedBlackTree<T1, T2>::insertCaseOne(Node *son)
@@ -160,56 +317,28 @@ void RedBlackTree<T1, T2>::insertCaseFive(Node *son)
         rotatedLeft(son->parent);
     }
 }
-```
-## 删除结点 log级别
-* 采用了[博客](https://blog.csdn.net/chenlong_cxy/article/details/121481859)的删除做法，本来想继续使用维基百科的做法，但是不太合适。
-* 现找到要删除结点的前驱结点，或者后继结点，然后和要删除的结点交换（只交换key和value，不交换结构），这样问题就变成了删除前驱结点或者后继结点。
-**调整时还是根据结点颜色分类讨论，情况复杂时对兄弟结点颜色进行讨论，会发现其妙的事情:)**
-* 兄弟结点是黑色：兄弟结点的儿子全黑或全空直接处理，其他情况都可以转换成一种情况处理
-* 兄弟结点是红色：旋转一次转换成兄弟结点是红色结点的情况
-* **注意这里对删除后结点的调整还是要考虑想插入结点时调整的情况，考虑最后调整的结点是有左右儿子的，因为有些情况要递归向上调整**
-* **注意考虑可能递归向上调整的情况，所以旋转时要把子树转移好**
 
-**代码**
-```
-/*
-交换要删除的结点和要删除的结点的前驱结点
-删除原来结点的前驱结点注意删除后记得给指针置为nullptr
-*/
 template <class T1, class T2>
-bool RedBlackTree<T1, T2>::erase(T1 key)
+typename RedBlackTree<T1, T2>::Node *RedBlackTree<T1, T2>::getPreNode(Node *traver)
 {
-    Node *traver = root_;
-
-    while (traver)
-    {
-#ifdef DEBUG
-        cout << traver->key << endl;
-#endif
-        if (key < traver->key)
-            traver = traver->left_son;
-        else if (traver->key < key)
-            traver = traver->right_son;
-        else
-            break;
-    }
-
-    /* 没有找到要删除的结点 */
+    traver = traver->left_son;
     if (traver == nullptr)
-        return false;
+        return traver;
+    while (traver->right_son != nullptr)
+        traver = traver->right_son;
+    return traver;
+}
 
-    /* 获得前驱结点 */
-    Node *preNode = getPreNode(traver);
-
-    /* 将前驱结点和要删除结点的值交换，问题变为删除这个点的前驱结点
-    如果没有前驱结点删除自身*/
-    if (preNode)
-        swapKeyAndValue(traver, preNode);
-    else
-        preNode = traver;
-
-    eraseAndAdjust(preNode);
-    return true;
+/* 只交换结点的key value 不交换结点在树中的结构*/
+template <class T1, class T2>
+void RedBlackTree<T1, T2>::swapKeyAndValue(Node *a, Node *b)
+{
+    T1 temp_value = a->value;
+    T2 temp_key = a->key;
+    a->value = b->value;
+    a->key = b->key;
+    b->value = temp_value;
+    b->key = temp_key;
 }
 
 template <class T1, class T2>
@@ -372,17 +501,68 @@ void RedBlackTree<T1, T2>::eraseCaseThree(Node *son)
     parent->color = NODE_COLOR_RED;
     eraseCaseTwo(son);
 }
-```
-## 测试红黑树代码是否正确
-**如何判断一棵红黑树是正确的？**
-1. 判断是否是BST
-2. 任一结点到叶子节点路径上的黑色结点个数相同（黑色平衡）
-3. 没有连续量两个节点都是红色结点
-4. 根结点是否为黑色
-5. 结点的parent指针是否正确（调整的时候很容易忘记修改parent指针）
 
-**代码**
-```
+/* 求树的高度 */
+template <class T1, class T2>
+int RedBlackTree<T1, T2>::getHeight(Node *root_)
+{
+    if (root_ == nullptr)
+        return 0;
+    return 1 + max(getHeight(root_->left_son), getHeight(root_->right_son));
+}
+
+/* 打印这颗红黑树 */
+template <class T1, class T2>
+void RedBlackTree<T1, T2>::printRedBlackTree()
+{
+    if (root_ == nullptr)
+        return;
+    /*
+     first:前置空格数 second:结点
+     左儿子坐标 = 父结点坐标 - n/结点当前高度
+     右儿子坐标 = 父节点坐标 + n/结点当前高度
+    */
+    vector<pair<int, Node *>> a, b;
+    int n = 1 << getHeight(root_); /* 对应高度满二叉树结点个数 */
+    a.push_back(pair<int, Node *>(n >> 1, root_));
+    int h = 2;
+
+    while (1)
+    {
+        int cnt = 0;
+        for (auto it : a)
+        {
+            /* 前面有空缺用空格替代 */
+            while (cnt < it.first)
+            {
+                ++cnt;
+                printf("    ");
+            }
+
+            /*层序输出结点的键值 和 颜色 */
+
+            if (it.second->color)
+                printf("%3dB", it.second->key);
+            else
+                printf("%3dR", it.second->key);
+
+            if (it.second->left_son)
+            {
+                b.push_back(pair<int, Node *>(it.first - (n >> h), it.second->left_son));
+            }
+            if (it.second->right_son)
+            {
+                b.push_back(pair<int, Node *>(it.first + (n >> h), it.second->right_son));
+            }
+        }
+        // cout << "\n\n\n";
+        ++h;
+        a = b;
+        b.clear();
+        if (!a.size())
+            break;
+    }
+}
 
 /* 检查黑色平衡、指针、结点颜色，函数返回黑色高度 */
 template <class T1, class T2>
@@ -478,6 +658,119 @@ void RedBlackTree<T1, T2>::checkBst(Node *root_)
     }
     return;
 }
+
+/* 先找到合适位置插入，之后再根据父节点颜色判断是否进行调整 */
+template <class T1, class T2>
+void RedBlackTree<T1, T2>::insert(T1 key, T2 value)
+{
+    Node *insertNode = new Node(key, value);
+
+    Node *traver = root_;
+    while (traver)
+    {
+        if (key < traver->key)
+        {
+            if (traver->left_son)
+                traver = traver->left_son;
+            else
+            {
+                traver->left_son = insertNode;
+                break;
+            }
+        }
+        else if (key > traver->key)
+        {
+            if (traver->right_son)
+                traver = traver->right_son;
+            else
+            {
+                traver->right_son = insertNode;
+                break;
+            }
+        }
+        else /* 这个结点已经有过就更新 */
+        {
+            traver->value = value;
+            delete insertNode;
+            return;
+        }
+    }
+
+    insertNode->parent = traver;
+    insertCaseOne(insertNode);
+}
+
+/*
+交换要删除的结点和要删除的结点的前驱结点
+删除原来结点的前驱结点注意删除后记得给指针置为nullptr
+*/
+template <class T1, class T2>
+bool RedBlackTree<T1, T2>::erase(T1 key)
+{
+    Node *traver = root_;
+
+    while (traver)
+    {
+#ifdef DEBUG
+        cout << traver->key << endl;
+#endif
+        if (key < traver->key)
+            traver = traver->left_son;
+        else if (traver->key < key)
+            traver = traver->right_son;
+        else
+            break;
+    }
+
+    /* 没有找到要删除的结点 */
+    if (traver == nullptr)
+        return false;
+
+    /* 获得前驱结点 */
+    Node *preNode = getPreNode(traver);
+
+    /* 将前驱结点和要删除结点的值交换，问题变为删除这个点的前驱结点
+    如果没有前驱结点删除自身*/
+    if (preNode)
+        swapKeyAndValue(traver, preNode);
+    else
+        preNode = traver;
+
+    eraseAndAdjust(preNode);
+    return true;
+}
+
+template <class T1, class T2>
+T2 *RedBlackTree<T1, T2>::getValue(T1 key)
+{
+    Node *traver = root_;
+    while (traver)
+    {
+        if (key < traver->key)
+            traver = traver->left_son;
+        else if (key > traver->key)
+            traver = traver->right_son;
+        else
+            return traver->value;
+    }
+    return nullptr;
+}
+
+template <class T1, class T2>
+typename RedBlackTree<T1, T2>::Node *RedBlackTree<T1, T2>::getNode(T1 key)
+{
+    Node *traver = root_;
+    while (traver)
+    {
+        if (key < traver->key)
+            traver = traver->left_son;
+        else if (key > traver->key)
+            traver = traver->right_son;
+        else
+            return traver;
+    }
+    return nullptr;
+}
 /* 判断红黑树的正确性 */
 template <class T1, class T2>
 void RedBlackTree<T1, T2>::checkRedBlackTree()
@@ -494,129 +787,3 @@ void RedBlackTree<T1, T2>::checkRedBlackTree()
         exit(-1);
     }
 }
-```
-
-**如何编写测试函数**
-1. 利用上面这3点编写一个测试红黑树正确性的check函数（递归返回黑色子树黑色高度，异常时exit(-1)并输出提示）
-2. 你可以随机生成若干个的结点的key,边插入到红黑树中，边把key保存到数组中，边调用check函数判断红黑树结构是否正确。如果过程中没有错误，说明插入代码是正确的（先不用重置随机数种子，这样你如果测试出问题，继续生成同样个数的结点，生成的随机数还是一样的，**保证了数据的可复现性**。
-3. 随机取出数组中的某个key，然后在红黑树中删除对应结点，边删除边调用check函数直到红黑树为空。如果过程中没有错误，说明删除代码是正确的。
-
-**代码**
-```
-
-void test(int n)
-{
-    RedBlackTree<int, int> red_black_tree;
-    unordered_map<int, int> mp; /* 标记已经生成的key */
-    vector<int> index;          /* 保存key方便删除 */
-    int x = n;
-    /* 测试插入 */
-    while (x--)
-    {
-        /* 随机生成key */
-        int key;
-        while (mp.find(key = (rand() * 1000 + rand()%1000)) != mp.end());
-
-        mp[key] = 1;    index.push_back(key);
-        cout << "insert key: " << key << endl;
-        
-        red_black_tree.insert(key, 1);
-        red_black_tree.checkRedBlackTree();
-    }
-
-    cout << "--------------------------------" << endl;
-    cout << "--------------------------------" << endl;
-
-    /* 随机将插入的key删除 */
-    while (index.size())
-    {
-        /* 随机生成已有的key并删除对应结点 */
-        int id = rand() % index.size();
-        int key = index[id];
-
-        cout << "erase key: " << key << endl;
-        index.erase(index.begin() + id);
-
-        red_black_tree.erase(key);
-        red_black_tree.checkRedBlackTree();
-    }
-
-    cout << "RedBlackTree test success!!!" << endl;
-}
-```
-## 打印红黑树
-* 如过上面的测试通过了，那么我们肯定希望只看到结果，还希望看到整个过程中红黑树的样子吧！
-* 如果上面的测试失败了（毕竟代码量不小，还涉及到指针，所以难免会有bug），那么这个时候我们不仅需要GDB做断点调试，还需打印出红黑树的结构，因为树的结点一多，很难模拟出树的样子的来判断具体错误位置和原因
-**如何漂亮的打印出红黑树呢？**
-* 把高度为h的二维红黑树（看成满二叉树）压缩看成只有一层
-* 根结点在2^(h-1）的位置
-* 根结点左儿子在2^(h-1) - 2(h - 2)的位置，右儿子在2^(h - 1) +2 ^(h - 2)的位置
-* 以此类推每个结点应该所在的位置 n为对应高度满二叉树的结点数
-* 左儿子坐标 = 父结点坐标 - n/结点当前高度
-* 右儿子坐标 = 父节点坐标 + n/结点当前高度
-* 使用层序遍历打印结点，如果前面的结点空了，打印空格计数替代
-* 注意这种情况适合树节点个数不是很大的情况，否则因为有些位置前面没有结点，但是打印出每个结点的占位符不一定相等，不好把握个数，导致位置有点偏差,，而且电脑显示屏长度有限，结点个数一多一行就放不下了。
-
-**代码**
-```
-
-/* 打印这颗红黑树 */
-template <class T1, class T2>
-void RedBlackTree<T1, T2>::printRedBlackTree()
-{
-    if (root_ == nullptr)
-        return;
-    /*
-     first:前置空格数 second:结点
-     左儿子坐标 = 父结点坐标 - n/结点当前高度
-     右儿子坐标 = 父节点坐标 + n/结点当前高度
-    */
-    vector<pair<int, Node *>> a, b;
-    int n = 1 << getHeight(root_); /* 对应高度满二叉树结点个数 */
-    a.push_back(pair<int, Node *>(n >> 1, root_));
-    int h = 2;
-
-    while (1)
-    {
-        int cnt = 0;
-        for (auto it : a)
-        {
-            /* 前面有空缺用空格替代 */
-            while (cnt < it.first)
-            {
-                ++cnt;
-                printf("    ");
-            }
-
-            /*层序输出结点的键值 和 颜色 */
-
-            if (it.second->color)
-                printf("%3dB", it.second->key);
-            else
-                printf("%3dR", it.second->key);
-
-            if (it.second->left_son)
-            {
-                b.push_back(pair<int, Node *>(it.first - (n >> h), it.second->left_son));
-            }
-            if (it.second->right_son)
-            {
-                b.push_back(pair<int, Node *>(it.first + (n >> h), it.second->right_son));
-            }
-        }
-        // cout << "\n\n\n";
-        ++h;
-        a = b;
-        b.clear();
-        if (!a.size())
-            break;
-    }
-}
-```
-**效果图如下**
-<img width="846" alt="image" src="https://user-images.githubusercontent.com/65697942/173805411-922c8e94-28d2-485c-8468-deb95b1a0a0a.png">
-
-
-* 个人博客：https://blog.csdn.net/RunningBeef/article/details/124693348?spm=1001.2014.3001.5501 
-
-
