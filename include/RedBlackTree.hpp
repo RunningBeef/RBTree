@@ -33,9 +33,7 @@ public:
 
     bool erase(T1 key);
 
-    T2 *getValue(T1 key);
-
-    Node *getNode(T1 key);
+    T2 getValue(T1 key);
 
     void checkRedBlackTree();
 
@@ -511,7 +509,7 @@ int RedBlackTree<T1, T2>::getHeight(Node *root_)
     return 1 + max(getHeight(root_->left_son), getHeight(root_->right_son));
 }
 
-/* 打印这颗红黑树 */
+/* 打印这颗红黑树 如果结点过多或者key值太大,打印出的树会变形*/
 template <class T1, class T2>
 void RedBlackTree<T1, T2>::printRedBlackTree()
 {
@@ -555,13 +553,14 @@ void RedBlackTree<T1, T2>::printRedBlackTree()
                 b.push_back(pair<int, Node *>(it.first + (n >> h), it.second->right_son));
             }
         }
-        // cout << "\n\n\n";
+        cout << "\n\n\n";
         ++h;
         a = b;
         b.clear();
         if (!a.size())
             break;
     }
+    cout << endl;
 }
 
 /* 检查黑色平衡、指针、结点颜色，函数返回黑色高度 */
@@ -741,7 +740,7 @@ bool RedBlackTree<T1, T2>::erase(T1 key)
 }
 
 template <class T1, class T2>
-T2 *RedBlackTree<T1, T2>::getValue(T1 key)
+T2 RedBlackTree<T1, T2>::getValue(T1 key)
 {
     Node *traver = root_;
     while (traver)
@@ -756,21 +755,6 @@ T2 *RedBlackTree<T1, T2>::getValue(T1 key)
     return nullptr;
 }
 
-template <class T1, class T2>
-typename RedBlackTree<T1, T2>::Node *RedBlackTree<T1, T2>::getNode(T1 key)
-{
-    Node *traver = root_;
-    while (traver)
-    {
-        if (key < traver->key)
-            traver = traver->left_son;
-        else if (key > traver->key)
-            traver = traver->right_son;
-        else
-            return traver;
-    }
-    return nullptr;
-}
 /* 判断红黑树的正确性 */
 template <class T1, class T2>
 void RedBlackTree<T1, T2>::checkRedBlackTree()
